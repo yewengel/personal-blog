@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import BlogCard from '../components/BlogCard'
+
+function getSavedPosts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('myBlogPosts') || '[]')
+    return Array.isArray(saved) ? saved : []
+  } catch {
+    return []
+  }
+}
 
 function Home() {
   const [posts, setPosts] = useState([])
@@ -16,26 +26,22 @@ function Home() {
       setError('')
 
       try {
-        const response = await fetch('https://dummyjson.com/posts?limit=10')
+        const response = await fetch(
+          'https://dummyjson.com/posts?limit=10'
+        )
 
         if (!response.ok) {
           throw new Error('Unable to load sample posts.')
         }
 
         const data = await response.json()
-        const savedPosts = JSON.parse(
-          localStorage.getItem('myBlogPosts') || '[]'
-        )
 
         if (!cancelled) {
-          setPosts([...savedPosts, ...(data.posts || [])])
+          setPosts([...getSavedPosts(), ...(data.posts || [])])
         }
       } catch {
-        const savedPosts = JSON.parse(
-          localStorage.getItem('myBlogPosts') || '[]'
-        )
-
         if (!cancelled) {
+          const savedPosts = getSavedPosts()
           setPosts(savedPosts)
           setError(
             savedPosts.length
@@ -55,28 +61,51 @@ function Home() {
     }
   }, [])
 
+  // Refresh local posts when a post is published.
+  useEffect(() => {
+    function refreshLocalPosts() {
+      const savedPosts = getSavedPosts()
+
+      setPosts((currentPosts) => {
+        const apiPosts = currentPosts.filter(
+          (post) => !String(post.id).startsWith('local-')
+        )
+
+        return [...savedPosts, ...apiPosts]
+      })
+    }
+
+    window.addEventListener('postsUpdated', refreshLocalPosts)
+
+    return () => {
+      window.removeEventListener('postsUpdated', refreshLocalPosts)
+    }
+  }, [])
+
   const allTags = [
     ...new Set(posts.flatMap((post) => post.tags || [])),
   ]
 
-  const filteredPosts = posts.filter((post) => {
-    const query = search.trim().toLowerCase()
+  const query = search.trim().toLowerCase()
 
+  const filteredPosts = posts.filter((post) => {
     const matchesSearch =
       !query ||
       post.title?.toLowerCase().includes(query) ||
       post.body?.toLowerCase().includes(query) ||
-      (post.tags || []).some((tag) => tag.toLowerCase().includes(query))
+      (post.tags || []).some((tag) =>
+        tag.toLowerCase().includes(query)
+      )
 
     const matchesTag =
-      selectedTag === 'all' || (post.tags || []).includes(selectedTag)
+      selectedTag === 'all' ||
+      (post.tags || []).includes(selectedTag)
 
     return matchesSearch && matchesTag
   })
 
   return (
     <div className="min-w-0">
-      {/* Dark gray hero */}
       <section className="mb-8 rounded-2xl bg-gray-800 px-5 py-10 text-white sm:px-8 sm:py-14">
         <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-300">
           Welcome to Personal Blog
@@ -91,15 +120,14 @@ function Home() {
           with the world.
         </p>
 
-        <a
-          href="/create"
+        <Link
+          to="/create"
           className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-gray-100 px-5 py-3 font-semibold text-gray-800 transition hover:bg-gray-300 sm:w-auto"
         >
           + Create New Post
-        </a>
+        </Link>
       </section>
 
-      {/* Posts section */}
       <section>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
@@ -111,7 +139,6 @@ function Home() {
           </p>
         </div>
 
-        {/* Search and tag filter */}
         <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row">
           <input
             type="search"

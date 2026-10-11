@@ -63,19 +63,19 @@ function BlogCard({ post }) {
         ))}
       </div>
 
-      {/* Title */}
+      {}
       <Link to={`/blog/${post.id}`} className="block">
         <h2 className="text-xl font-bold text-gray-900 transition hover:text-gray-600">
           {post.title}
         </h2>
       </Link>
 
-      {/* Content preview */}
+      {}
       <p className="mt-3 line-clamp-4 text-sm leading-7 text-gray-600">
         {post.body}
       </p>
 
-      {/* Read more */}
+      {}
       <Link
         to={`/blog/${post.id}`}
         className="mt-5 block border-t border-gray-200 pt-4 font-semibold text-gray-700 transition hover:text-black"

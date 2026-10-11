@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 function BlogForm({
   onSubmit,
@@ -14,13 +13,6 @@ function BlogForm({
   const [tags, setTags] = useState(initialTags.join(', '))
   const [image, setImage] = useState(initialImage)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    setTitle(initialTitle)
-    setContent(initialContent)
-    setTags(initialTags.join(', '))
-    setImage(initialImage)
-  }, [initialTitle, initialContent, initialTags, initialImage])
 
   function handleImageChange(event) {
     const file = event.target.files?.[0]
@@ -39,12 +31,10 @@ function BlogForm({
     }
 
     setError('')
+
     const reader = new FileReader()
-
-    reader.onload = () => {
-      setImage(reader.result)
-    }
-
+    reader.onload = () => setImage(reader.result)
+    reader.onerror = () => setError('Unable to read this image.')
     reader.readAsDataURL(file)
   }
 
@@ -70,66 +60,67 @@ function BlogForm({
       ),
     ]
 
-    onSubmit({
-      title: title.trim(),
-      body: content.trim(),
-      tags: tagList,
-      image,
-    })
-
-    setError('')
+    try {
+      onSubmit({
+        title: title.trim(),
+        body: content.trim(),
+        tags: tagList,
+        image,
+      })
+      setError('')
+    } catch {
+      setError('Unable to publish your post. Please try again.')
+    }
   }
+
+  const inputClass =
+    'w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label
-          htmlFor="title"
-          className="mb-2 block font-semibold text-gray-700"
-        >
+        <label htmlFor="title" className="mb-2 block font-semibold text-gray-700">
           Title
         </label>
         <input
           id="title"
+          name="title"
           type="text"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Enter your post title"
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          className={inputClass}
+          autoComplete="off"
         />
       </div>
 
       <div>
-        <label
-          htmlFor="content"
-          className="mb-2 block font-semibold text-gray-700"
-        >
+        <label htmlFor="content" className="mb-2 block font-semibold text-gray-700">
           Content
         </label>
         <textarea
           id="content"
+          name="content"
           value={content}
           onChange={(event) => setContent(event.target.value)}
           placeholder="Write your story..."
           rows={7}
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label
-          htmlFor="tags"
-          className="mb-2 block font-semibold text-gray-700"
-        >
+        <label htmlFor="tags" className="mb-2 block font-semibold text-gray-700">
           Tags
         </label>
         <input
           id="tags"
+          name="tags"
           type="text"
           value={tags}
           onChange={(event) => setTags(event.target.value)}
           placeholder="technology, travel, lifestyle"
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          className={inputClass}
         />
         <p className="mt-1 text-sm text-gray-500">
           Separate tags with commas.
@@ -137,14 +128,12 @@ function BlogForm({
       </div>
 
       <div>
-        <label
-          htmlFor="image"
-          className="mb-2 block font-semibold text-gray-700"
-        >
+        <label htmlFor="image" className="mb-2 block font-semibold text-gray-700">
           Upload Photo (optional)
         </label>
         <input
           id="image"
+          name="image"
           type="file"
           accept="image/*"
           onChange={handleImageChange}
@@ -161,7 +150,7 @@ function BlogForm({
             <button
               type="button"
               onClick={() => setImage('')}
-              className="mt-2 text-sm text-red-600 hover:underline"
+              className="mt-2 text-sm text-gray-600 hover:text-black hover:underline"
             >
               Remove photo
             </button>
@@ -170,20 +159,17 @@ function BlogForm({
       </div>
 
       {error && (
-        <p
-          role="alert"
-          className="rounded-lg bg-red-50 p-3 text-sm text-red-600"
-        >
+        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
           {error}
         </p>
       )}
 
       <button
-  type="submit"
-  className="w-full rounded-lg bg-gray-700 px-5 py-3 font-semibold text-white transition hover:bg-gray-600 sm:w-auto"
->
-  {buttonText}
-</button>
+        type="submit"
+        className="w-full rounded-lg bg-gray-700 px-5 py-3 font-semibold text-white transition hover:bg-gray-600 sm:w-auto"
+      >
+        {buttonText}
+      </button>
     </form>
   )
 }

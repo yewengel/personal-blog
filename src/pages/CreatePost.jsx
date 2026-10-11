@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom'
 import BlogForm from '../components/BlogForm'
 
@@ -6,27 +5,35 @@ function CreatePost() {
   const navigate = useNavigate()
 
   function handleCreatePost(formData) {
-    const savedPosts = JSON.parse(
-      localStorage.getItem('myBlogPosts') || '[]'
-    )
+    try {
+      const savedPosts = JSON.parse(
+        localStorage.getItem('myBlogPosts') || '[]'
+      )
 
-    const newPost = {
-      id: `local-${Date.now()}`,
-      title: formData.title,
-      body: formData.body,
-      tags: formData.tags,
-      image: formData.image || '',
-      reactions: { likes: 0 },
-      userId: 1,
-      createdAt: new Date().toISOString(),
+      const newPost = {
+        id: `local-${Date.now()}`,
+        title: formData.title,
+        body: formData.body,
+        tags: formData.tags,
+        image: formData.image || '',
+        reactions: { likes: 0 },
+        userId: 1,
+        createdAt: new Date().toISOString(),
+      }
+
+      localStorage.setItem(
+        'myBlogPosts',
+        JSON.stringify([newPost, ...savedPosts])
+      )
+
+      // Notify Home that a post was published.
+      window.dispatchEvent(new Event('postsUpdated'))
+
+      navigate('/')
+    } catch (error) {
+      console.error('Unable to save post:', error)
+      alert('Unable to publish your post. Please try again.')
     }
-
-    localStorage.setItem(
-      'myBlogPosts',
-      JSON.stringify([newPost, ...savedPosts])
-    )
-
-    navigate('/')
   }
 
   return (

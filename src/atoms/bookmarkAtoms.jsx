@@ -17,7 +17,6 @@ function loadBookmarks() {
 
 export const bookmarksAtom = atom(loadBookmarks())
 
-// Listen for bookmark changes from other browser tabs.
 bookmarksAtom.onMount = (setAtom) => {
   if (typeof window === 'undefined') {
     return
@@ -44,7 +43,6 @@ bookmarksAtom.onMount = (setAtom) => {
   }
 }
 
-// Automatically save bookmark changes.
 export const persistentBookmarksAtom = atom(
   (get) => get(bookmarksAtom),
   (get, set, update) => {

@@ -1,88 +1,183 @@
-
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAtom } from 'jotai'
+import { persistentBookmarksAtom } from '../atoms/bookmarkAtoms'
 
 function BlogDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
+
   const [post, setPost] = useState(null)
   const [comments, setComments] = useState([])
+  const [bookmarks, setBookmarks] = useAtom(persistentBookmarksAtom)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const savedPosts = JSON.parse(localStorage.getItem('myBlogPosts') || '[]')
-  const ownPost = savedPosts.find((item) => String(item.id) === id)
+  const isBookmarked = bookmarks.some(
+    (item) => String(item.id) === String(id)
+  )
 
   useEffect(() => {
+    let cancelled = false
+
     async function loadPost() {
+      setLoading(true)
+      setError('')
+      setPost(null)
+      setComments([])
+
       try {
+        const savedPosts = JSON.parse(
+          localStorage.getItem('myBlogPosts') || '[]'
+        )
+
+        const ownPost = savedPosts.find(
+          (item) => String(item.id) === String(id)
+        )
+
         if (ownPost) {
-          setPost(ownPost)
-          setComments([])
+          if (!cancelled) {
+            setPost(ownPost)
+            setComments([])
+          }
           return
         }
 
         const [postResponse, commentsResponse] = await Promise.all([
           fetch(`https://dummyjson.com/posts/${id}`),
-          fetch(`https://dummyjson.com/posts/${id}/comments`),
+          fetch(`https://dummyjson.com/comments/post/${id}`),
         ])
 
-        if (!postResponse.ok || !commentsResponse.ok) {
-          throw new Error('Post not found')
+        if (!postResponse.ok) {
+          throw new Error('Post not found.')
         }
 
         const postData = await postResponse.json()
-        const commentsData = await commentsResponse.json()
 
-        setPost(postData)
-        setComments(commentsData.comments)
+        let commentsData = { comments: [] }
+
+        if (commentsResponse.ok) {
+          commentsData = await commentsResponse.json()
+        }
+
+        if (!cancelled) {
+          setPost(postData)
+          setComments(commentsData.comments || [])
+        }
       } catch {
-        setError('Unable to load this blog post.')
+        if (!cancelled) {
+          setError('Unable to load this blog post. Please try again.')
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
     loadPost()
+
+    return () => {
+      cancelled = true
+    }
   }, [id])
 
-  function handleDelete() {
-    const confirmed = window.confirm('Are you sure you want to delete this post?')
-    if (!confirmed) return
+  function handleBookmark() {
+    if (!post) return
 
-    const remainingPosts = savedPosts.filter(
-      (item) => String(item.id) !== id
+    setBookmarks((previous) => {
+      const alreadySaved = previous.some(
+        (item) => String(item.id) === String(post.id)
+      )
+
+      if (alreadySaved) {
+        return previous.filter(
+          (item) => String(item.id) !== String(post.id)
+        )
+      }
+
+      return [...previous, post]
+    })
+  }
+
+  function handleDelete() {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this post?'
     )
 
-    localStorage.setItem('myBlogPosts', JSON.stringify(remainingPosts))
+    if (!confirmed) return
+
+    const savedPosts = JSON.parse(
+      localStorage.getItem('myBlogPosts') || '[]'
+    )
+
+    const remainingPosts = savedPosts.filter(
+      (item) => String(item.id) !== String(post.id)
+    )
+
+    localStorage.setItem(
+      'myBlogPosts',
+      JSON.stringify(remainingPosts)
+    )
+
+    setBookmarks((previous) =>
+      previous.filter((item) => String(item.id) !== String(post.id))
+    )
+
     navigate('/')
   }
 
   if (loading) {
-    return <p className="py-10 text-center">Loading blog post...</p>
+    return (
+      <p className="py-10 text-center text-gray-600">
+        Loading blog post...
+      </p>
+    )
   }
 
   if (error || !post) {
     return (
-      <div className="rounded-xl bg-white p-8 text-center">
-        <p className="text-red-600">{error || 'Blog post not found.'}</p>
-        <Link to="/" className="mt-4 inline-block text-indigo-600">
+      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+        <p className="text-red-600">
+          {error || 'Blog post not found.'}
+        </p>
+
+        <Link
+          to="/"
+          className="mt-4 inline-block rounded-lg bg-gray-700 px-5 py-3 font-semibold text-white transition hover:bg-gray-600"
+        >
           ← Back to Home
         </Link>
       </div>
     )
   }
 
+  const isOwnPost = String(post.id).startsWith('local-')
+
   return (
     <article className="mx-auto max-w-3xl">
-      <Link to="/" className="mb-8 inline-block font-medium text-indigo-600">
+      <Link
+        to="/"
+        className="mb-6 inline-block font-medium text-gray-700 transition hover:text-black"
+      >
         ← Back to Home
       </Link>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-10">
+        {post.image && (
+          <img
+            src={post.image}
+            alt={post.title}
+            className="mb-6 max-h-96 w-full rounded-xl object-cover"
+          />
+        )}
+
         <div className="mb-5 flex flex-wrap gap-2">
           {(post.tags || []).map((tag) => (
-            <span key={tag} className="rounded-full bg-indigo-50 px-3 py-1 text-sm text-indigo-700">
+            <span
+              key={tag}
+              className="rounded-full bg-gray-200 px-3 py-1 text-sm text-gray-700"
+            >
               #{tag}
             </span>
           ))}
@@ -100,23 +195,29 @@ function BlogDetails() {
           {post.body}
         </p>
 
-        {ownPost && (
-          <div className="mt-8 flex gap-3 border-t border-gray-100 pt-6">
-            <Link
-              to={`/edit/${post.id}`}
-              className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700"
-            >
-              Edit Post
-            </Link>
+        <div className="mt-8 flex flex-wrap gap-3 border-t border-gray-100 pt-6">
+          <button
+            type="button"
+            onClick={handleBookmark}
+            className={`rounded-xl px-5 py-3 font-semibold transition ${
+              isBookmarked
+                ? 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                : 'bg-gray-700 text-white hover:bg-gray-600'
+            }`}
+          >
+            {isBookmarked ? '★ Remove Bookmark' : '☆ Add Bookmark'}
+          </button>
 
+          {isOwnPost && (
             <button
+              type="button"
               onClick={handleDelete}
-              className="rounded-xl bg-red-50 px-5 py-3 font-semibold text-red-600 hover:bg-red-100"
+              className="rounded-xl bg-red-50 px-5 py-3 font-semibold text-red-600 transition hover:bg-red-100"
             >
               Delete Post
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <section className="mt-10">
@@ -129,11 +230,17 @@ function BlogDetails() {
         ) : (
           <div className="space-y-4">
             {comments.map((comment) => (
-              <div key={comment.id} className="rounded-xl border border-gray-200 bg-white p-5">
+              <div
+                key={comment.id}
+                className="rounded-xl border border-gray-200 bg-white p-5"
+              >
                 <h3 className="font-semibold text-gray-900">
                   {comment.user?.fullName || 'Anonymous'}
                 </h3>
-                <p className="mt-2 leading-6 text-gray-600">{comment.body}</p>
+
+                <p className="mt-2 leading-6 text-gray-600">
+                  {comment.body}
+                </p>
               </div>
             ))}
           </div>
