@@ -26,7 +26,7 @@ function BlogCard({ post }) {
 
   return (
     <article className="relative h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
-      {/* Bookmark star */}
+      {}
       <button
         type="button"
         onClick={handleBookmark}
@@ -40,7 +40,7 @@ function BlogCard({ post }) {
         </span>
       </button>
 
-      {/* Post image */}
+      {}
       {post.image && (
         <Link to={`/blog/${post.id}`} className="block">
           <img
@@ -51,7 +51,7 @@ function BlogCard({ post }) {
         </Link>
       )}
 
-      {/* Tags */}
+      {}
       <div className="mb-4 flex flex-wrap gap-2 pr-8">
         {(post.tags || []).map((tag) => (
           <span
