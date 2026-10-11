@@ -61,7 +61,6 @@ function Home() {
     }
   }, [])
 
-  // Refresh local posts when a post is published.
   useEffect(() => {
     function refreshLocalPosts() {
       const savedPosts = getSavedPosts()
