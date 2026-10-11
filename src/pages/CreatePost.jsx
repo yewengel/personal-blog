@@ -26,7 +26,6 @@ function CreatePost() {
         JSON.stringify([newPost, ...savedPosts])
       )
 
-      // Notify Home that a post was published.
       window.dispatchEvent(new Event('postsUpdated'))
 
       navigate('/')
